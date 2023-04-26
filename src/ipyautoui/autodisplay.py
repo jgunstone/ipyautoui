@@ -229,8 +229,8 @@ def url_ok(url):
         return e
 
 
-# TODO: create a DisplayFromRequest actions. for use with API queries...?
-class DisplayFromRequest(DisplayActions):
+# TODO: create a DisplayRequestActions actions. for use with API queries...?
+class DisplayRequestActions(DisplayActions):
     path: HttpUrl
 
     @validator("check_exists", always=True)
@@ -447,7 +447,7 @@ class DisplayRequest(DisplayObject):
         renderers = get_renderers(
             renderers=renderers, extend_default_renderers=extend_default_renderers
         )
-        display_actions = DisplayFromRequest(path=path, ext=ext, renderers=renderers)
+        display_actions = DisplayRequestActions(path=path, ext=ext, renderers=renderers)
         super().__init__(display_actions=display_actions, **kwargs)
 
 
@@ -543,7 +543,7 @@ if __name__ == "__main__":
 if __name__ == "__main__":
     path = "https://catfact.ninja/fact"
     ext = ".json"
-    display(DisplayFromRequest(path=path, ext=ext).renderer())
+    display(DisplayRequestActions(path=path, ext=ext).renderer())
 
 
 # %%
@@ -807,7 +807,7 @@ class AutoDisplay(w.VBox):
                     if isinstance(v, pathlib.Path):
                         return DisplayPathActions(path=v, ext=k, renderers=renderers)
                     elif isinstance(v, HttpUrl):
-                        return DisplayFromRequest(path=v, ext=k, renderers=renderers)
+                        return DisplayRequestActions(path=v, ext=k, renderers=renderers)
                     elif callable(v):
                         return DisplayFromCallable(path=v, ext=k, renderers=renderers)
                     else:
@@ -833,7 +833,7 @@ class AutoDisplay(w.VBox):
     @staticmethod
     def actions_from_requests(map_requests: ty.Dict[str, HttpUrl], renderers=None):
         return [
-            DisplayFromRequest(path=v, ext=k, renderers=renderers)
+            DisplayRequestActions(path=v, ext=k, renderers=renderers)
             for k, v in map_requests.items()
         ]
 
@@ -1063,11 +1063,11 @@ if __name__ == "__main__":
 
     path = "https://catfact.ninja/fact"
     ext = ".catfact"
-    d1 = DisplayFromRequest(path=path, ext=ext, renderer=display_catfact)
+    d1 = DisplayRequestActions(path=path, ext=ext, renderer=display_catfact)
 
     path = "https://official-joke-api.appspot.com/random_joke"
     ext = ".json"
-    d2 = DisplayFromRequest(path=path, ext=ext)
+    d2 = DisplayRequestActions(path=path, ext=ext)
 
     test_display = AutoDisplay([d1, d2])
     display(Markdown("### From requests: "))
