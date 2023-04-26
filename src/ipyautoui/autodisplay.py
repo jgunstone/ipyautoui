@@ -108,7 +108,7 @@ def get_renderers(
 
 
 # %%
-class DisplayObjectActions(BaseModel):
+class DisplayActions(BaseModel):
     """base object with callables for creating a display object"""
 
     renderers: dict[str, ty.Callable] = dict(DEFAULT_FILE_RENDERERS)
@@ -143,7 +143,7 @@ def check_exists(path):
         return False
 
 
-class DisplayFromPath(DisplayObjectActions):
+class DisplayFromPath(DisplayActions):
     path_new: pathlib.Path = None
     open_file: ty.Callable = None
     open_folder: ty.Callable = None
@@ -230,7 +230,7 @@ def url_ok(url):
 
 
 # TODO: create a DisplayFromRequest actions. for use with API queries...?
-class DisplayFromRequest(DisplayObjectActions):
+class DisplayFromRequest(DisplayActions):
     path: HttpUrl
 
     @validator("check_exists", always=True)
@@ -257,7 +257,7 @@ def check_callable(fn: ty.Callable):  # NTO USED
         return False
 
 
-class DisplayFromCallable(DisplayObjectActions):
+class DisplayFromCallable(DisplayActions):
     path: ty.Callable
 
     @validator("check_exists", always=True)
@@ -299,7 +299,7 @@ class DisplayObject(w.VBox):
     _value = tr.Unicode()
     auto_open = tr.Bool(default_value=False)
     order = tr.Tuple(default_value=ORDER_NOTPATH, allow_none=False)
-    display_actions = tr.Instance(klass=DisplayObjectActions)
+    display_actions = tr.Instance(klass=DisplayActions)
 
     @tr.validate("order")
     def _validate_order(self, proposal):
@@ -338,7 +338,7 @@ class DisplayObject(w.VBox):
         """display object
 
         Args:
-            display_actions (ty.Type[DisplayObjectActions]): actions used to display object
+            display_actions (ty.Type[DisplayActions]): actions used to display object
             auto_open (bool, optional): automatically display object data (i.e. auto-preview file). Defaults to False.
             order (tuple, optional): defines UI controls appearance. Defaults to None.
                 allowed values are: ("exists", "openpreview", "openfile", "openfolder", "name")
@@ -527,6 +527,8 @@ open folder:
             time.sleep(5)
             clear_output()
         self.out_caller.layout.display = "none"
+
+
 # %%
 if __name__ == "__main__":
     d = DisplayFromPath(path="__init__.py")
@@ -631,11 +633,12 @@ if __name__ == "__main__":
 # %%
 class AutoDisplay(w.VBox):
     order = tr.Tuple(default_value=ORDER_NOTPATH, allow_none=False)
-    
+
     @tr.observe("order")
     def _observe_order(self, change):
         for d in self.display_objects:
             d.order = change["new"]
+
     """
     displays the contents of a file in the notebook.
     comes with the following default renderers:
@@ -666,7 +669,7 @@ class AutoDisplay(w.VBox):
 
     def __init__(
         self,
-        display_objects_actions: ty.List[DisplayObjectActions],
+        display_objects_actions: ty.List[DisplayActions],
         patterns: ty.Union[
             str, ty.List, None
         ] = None,  # TODO: add pattern matching. currently only works with paths
@@ -675,7 +678,7 @@ class AutoDisplay(w.VBox):
     ):
         """
         Args:
-            display_objects_actions (ty.List[DisplayObjectActions]):
+            display_objects_actions (ty.List[DisplayActions]):
             patterns: (str or list), patterns to auto-open
             title: (str), default = None,
             display_showhide: bool = True,
@@ -969,7 +972,6 @@ class AutoDisplay(w.VBox):
     def display_default(self, onclick=None):
         for d, a in zip(self.display_objects, self.auto_open):
             d.openpreview.value = a
-
 
     def _activate_waiting(self):
         [d._activate_waiting() for d in self.display_objects]
