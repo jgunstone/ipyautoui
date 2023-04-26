@@ -629,12 +629,13 @@ if __name__ == "__main__":
 
 
 # %%
-class AutoDisplay(tr.HasTraits):
+class AutoDisplay(w.VBox):
     order = tr.Tuple(default_value=ORDER_NOTPATH, allow_none=False)
     
     @tr.observe("order")
     def _observe_order(self, change):
-        self._update_bx_bar(change["new"])
+        for d in self.display_objects:
+            d.order = change["new"]
     """
     displays the contents of a file in the notebook.
     comes with the following default renderers:
@@ -904,7 +905,7 @@ class AutoDisplay(tr.HasTraits):
         self._display_objects_actions = display_objects_actions
         self.display_objects = [DisplayObject(d) for d in display_objects_actions]
 
-        self.box_files.children = self.display_objects
+        self.box_paths.children = self.display_objects
 
     @property
     def patterns(self):
@@ -941,6 +942,7 @@ class AutoDisplay(tr.HasTraits):
         ]
 
     def _init_form(self):
+        super().__init__()
         self.b_display_all = w.Button(**KWARGS_DISPLAY_ALL_FILES)
         self.b_collapse_all = w.Button(**KWARGS_COLLAPSE_ALL_FILES)
         self.b_display_default = w.Button(**KWARGS_HOME_DISPLAY_FILES)
@@ -948,9 +950,8 @@ class AutoDisplay(tr.HasTraits):
         self.box_showhide = w.HBox()
         self.box_title = w.HBox()
         self.box_header.children = [self.box_title, self.box_showhide]
-        self.box_files = w.VBox()
-        self.box_form = w.VBox()
-        self.box_form.children = [self.box_header, self.box_files]
+        self.box_paths = w.VBox()
+        self.children = [self.box_header, self.box_paths]
 
     def _init_controls(self):
         self.b_display_all.on_click(self.display_all)
@@ -969,11 +970,6 @@ class AutoDisplay(tr.HasTraits):
         for d, a in zip(self.display_objects, self.auto_open):
             d.openpreview.value = a
 
-    def display(self):
-        display(self.box_form)
-
-    def _ipython_display_(self):
-        self.display()
 
     def _activate_waiting(self):
         [d._activate_waiting() for d in self.display_objects]
