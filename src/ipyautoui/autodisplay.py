@@ -280,13 +280,13 @@ if __name__ == "__main__":
 # %%
 # TODO: separate out the bit that is display data and display from path...
 # TODO: probs useful to have a `value` trait (allowing the object to be updated instead of remade)
-#       this probably means having DisplayObject as a base class and extending it for display file...
+#       this probably means having DisplayActionsUi as a base class and extending it for display file...
 
 ORDER_DEFAULT = ("exists", "openpreview", "openfile", "openfolder", "name")
 ORDER_NOTPATH = ("exists", "openpreview", "name")
 
 
-class DisplayObject(w.VBox):
+class DisplayActionsUi(w.VBox):
     """
     class for displaying file-like objects.
 
@@ -417,7 +417,7 @@ class DisplayObject(w.VBox):
                 clear_output()
 
 
-class DisplayCallable(DisplayObject):
+class DisplayCallable(DisplayActionsUi):
     def __init__(
         self,
         value,
@@ -436,7 +436,7 @@ class DisplayCallable(DisplayObject):
         super().__init__(display_actions=display_actions, **kwargs)
 
 
-class DisplayRequest(DisplayObject):
+class DisplayRequest(DisplayActionsUi):
     def __init__(
         self,
         value,
@@ -453,7 +453,7 @@ class DisplayRequest(DisplayObject):
         super().__init__(display_actions=display_actions, **kwargs)
 
 
-class DisplayPath(DisplayObject):
+class DisplayPath(DisplayActionsUi):
     _value = tr.Unicode(default_value="")
 
     @tr.default("order")
@@ -534,7 +534,7 @@ open folder:
 # %%
 if __name__ == "__main__":
     d = DisplayPathActions(path="__init__.py")
-    do = DisplayObject(d)
+    do = DisplayActionsUi(d)
     display(do)
 
 # %%
@@ -910,7 +910,7 @@ class AutoDisplay(w.VBox):
     @display_objects_actions.setter
     def display_objects_actions(self, display_objects_actions):
         self._display_objects_actions = display_objects_actions
-        self.display_objects = [DisplayObject(d) for d in display_objects_actions]
+        self.display_objects = [DisplayActionsUi(d) for d in display_objects_actions]
 
         self.box_paths.children = self.display_objects
 
