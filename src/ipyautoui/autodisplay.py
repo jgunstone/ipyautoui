@@ -143,7 +143,7 @@ def check_exists(path):
         return False
 
 
-class DisplayFromPath(DisplayActions):
+class DisplayPathActions(DisplayActions):
     path_new: pathlib.Path = None
     open_file: ty.Callable = None
     open_folder: ty.Callable = None
@@ -274,7 +274,7 @@ class DisplayFromCallable(DisplayActions):
 
 # %%
 if __name__ == "__main__":
-    d = DisplayFromPath(path="__init__.py")
+    d = DisplayPathActions(path="__init__.py")
     display(d.renderer())
 
 # %%
@@ -468,7 +468,7 @@ class DisplayPath(DisplayObject):
         self.renderers = get_renderers(
             renderers=renderers, extend_default_renderers=extend_default_renderers
         )
-        display_actions = DisplayFromPath(path=value, renderers=self.renderers)
+        display_actions = DisplayPathActions(path=value, renderers=self.renderers)
         self._update_form_DisplayPath()
         super().__init__(display_actions=display_actions, **kwargs)
         self._init_controls_DisplayPath()
@@ -508,7 +508,7 @@ open folder:
 
     @value.setter
     def value(self, value):
-        self.display_actions = DisplayFromPath(path=value, renderers=self.renderers)
+        self.display_actions = DisplayPathActions(path=value, renderers=self.renderers)
 
     def _openfile(self, sender):
         self.out_caller.layout.display = ""
@@ -531,7 +531,7 @@ open folder:
 
 # %%
 if __name__ == "__main__":
-    d = DisplayFromPath(path="__init__.py")
+    d = DisplayPathActions(path="__init__.py")
     do = DisplayObject(d)
     display(do)
 
@@ -800,12 +800,12 @@ class AutoDisplay(w.VBox):
     ):
         def choose(path, renderers):
             if isinstance(path, pathlib.Path):
-                return DisplayFromPath(path=path, renderers=renderers)
+                return DisplayPathActions(path=path, renderers=renderers)
             elif isinstance(path, dict):
                 if len(path) == 1:
                     k, v = list(path.items())[0]
                     if isinstance(v, pathlib.Path):
-                        return DisplayFromPath(path=v, ext=k, renderers=renderers)
+                        return DisplayPathActions(path=v, ext=k, renderers=renderers)
                     elif isinstance(v, HttpUrl):
                         return DisplayFromRequest(path=v, ext=k, renderers=renderers)
                     elif callable(v):
@@ -828,7 +828,7 @@ class AutoDisplay(w.VBox):
         paths: ty.List[pathlib.Path],
         renderers=None,
     ):
-        return [DisplayFromPath(path=path, renderers=renderers) for path in paths]
+        return [DisplayPathActions(path=path, renderers=renderers) for path in paths]
 
     @staticmethod
     def actions_from_requests(map_requests: ty.Dict[str, HttpUrl], renderers=None):
