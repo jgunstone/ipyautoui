@@ -23,21 +23,16 @@
 
 # +
 import ipywidgets as w
-from markdown import markdown
-from IPython.display import display, clear_output
+from IPython.display import display
 from pydantic import BaseModel, validator, Field
 import pathlib
 import typing as ty
-import stringcase
-from datetime import datetime
 import traitlets as tr
 import json
 import logging
-from ipyautoui.constants import DELETE_BUTTON_KWARGS
 from ipyautoui._utils import getuser
-from ipyautoui.autodisplay import DisplayObject, DisplayPath
+from ipyautoui.autodisplay import DisplayPath
 from ipyautoui.custom.iterable import Array
-from ipyautoui.autodisplay_renderers import render_file
 from ipyautoui.env import Env
 
 IPYAUTOUI_ROOTDIR = Env().IPYAUTOUI_ROOTDIR
