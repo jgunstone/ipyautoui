@@ -635,11 +635,54 @@ if __name__ == "__main__":
 # %%
 class AutoDisplay(w.VBox):
     order = tr.Tuple(default_value=ORDER_NOTPATH, allow_none=False)
+    patterns = tr.List(trait=tr.Unicode())
+    title = tr.Unicode()
+    display_showhide = tr.Bool(default_value=False)
+    display_actions = tr.List(trait=tr.Instance(klass=DisplayActions))
+
+    @tr.observe("title")
+    def title(self, change):
+        self.html_title.value = change["new"]
 
     @tr.observe("order")
     def _observe_order(self, change):
         for d in self.display_objects:
             d.order = change["new"]
+
+    @tr.observe("display_showhide")
+    def _observe_display_showhide(self, change):
+        if hasattr(self, "display_objects") and len(self.display_objects) == 1:
+            self.display_showhide = False
+        if self.display_showhide:
+            self.box_showhide.children = [
+                w.HBox(layout=w.Layout(width="24px", height=BUTTON_HEIGHT_MIN)),
+                self.b_display_all,
+                self.b_collapse_all,
+                self.b_display_default,
+            ]
+        else:
+            self.box_showhide.children = []
+
+    @tr.observe("patterns")
+    def _observe_patterns(self, change):
+        if change["new"] is None:
+            self.b_display_default.layout.display = "None"
+            for d in self.display_actions:
+                d.auto_open = False
+        else:
+            match = (
+                lambda name, path: str(path) if isinstance(path, pathlib.Path) else name
+            )
+            
+            self.auto_open = [
+                fnmatch.fnmatch(match(name, path), patterns=self.patterns)
+                for name, path in self.map_names_paths.items()
+            ]
+            if sum(self.auto_open) == len(self.paths):
+                self.b_display_default.layout.display = "None"
+            else:
+                self.b_display_default.layout.display = ""
+
 
     """
     displays the contents of a file in the notebook.
@@ -669,6 +712,84 @@ class AutoDisplay(w.VBox):
     if you want to display the data in a specific way.
     """
 
+    @property
+    def paths(self):
+        return [d.path for d in self.display_objects_actions]
+
+    @property
+    def map_names_paths(self):
+        return {d.name: d.path for d in self.display_objects_actions}
+
+    @property
+    def display_objects_actions(self):
+        return self._display_objects_actions
+
+    @display_objects_actions.setter
+    def display_objects_actions(self, display_objects_actions):
+        self._display_objects_actions = display_objects_actions
+        self.display_objects = [DisplayActionsUi(d) for d in display_objects_actions]
+
+        self.box_paths.children = self.display_objects
+
+    @property
+    def patterns(self):
+        return self._patterns
+
+    @patterns.setter
+    def patterns(self, value):
+        self._patterns = value
+        if value is None:
+            self.b_display_default.layout.display = "None"
+            self.auto_open = [False] * len(self.paths)
+        else:
+            match = (
+                lambda name, path: str(path) if isinstance(path, pathlib.Path) else name
+            )
+            self.auto_open = [
+                fnmatch.fnmatch(match(name, path), patterns=self.patterns)
+                for name, path in self.map_names_paths.items()
+            ]
+            if sum(self.auto_open) == len(self.paths):
+                self.b_display_default.layout.display = "None"
+            else:
+                self.b_display_default.layout.display = ""
+
+    def _init_form(self):
+        self.b_display_all = w.Button(**KWARGS_DISPLAY_ALL_FILES)
+        self.b_collapse_all = w.Button(**KWARGS_COLLAPSE_ALL_FILES)
+        self.b_display_default = w.Button(**KWARGS_HOME_DISPLAY_FILES)
+        self.box_header = w.VBox()
+        self.box_showhide = w.HBox()
+        self.box_title = w.HBox()
+        self.html_title = w.HTML()
+        self.box_title.children = [self.html_title]
+        self.box_header.children = [self.box_title, self.box_showhide]
+        self.box_paths = w.VBox()
+
+
+    def _init_controls(self):
+        self.b_display_all.on_click(self.display_all)
+        self.b_collapse_all.on_click(self.collapse_all)
+        self.b_display_default.on_click(self.display_default)
+
+    def display_all(self, onclick=None):
+        for d in self.display_objects:
+            d.openpreview.value = True
+
+    def collapse_all(self, onclick=None):
+        for d in self.display_objects:
+            d.openpreview.value = False
+
+    def display_default(self, onclick=None):
+        for d, a in zip(self.display_objects, self.auto_open):
+            d.openpreview.value = a
+
+    def _activate_waiting(self):
+        [d._activate_waiting() for d in self.display_objects]
+
+    def _update_files(self):
+        [d._update_file() for d in self.display_objects]
+
     def __init__(
         self,
         display_objects_actions: ty.List[DisplayActions],
@@ -694,6 +815,8 @@ class AutoDisplay(w.VBox):
         self.display_objects_actions = display_objects_actions
         self.display_showhide = display_showhide
         self.patterns = patterns
+        super().__init__(**kwargs)
+        self.children = [self.box_header, self.box_paths]
 
     @classmethod
     def from_paths(
@@ -864,126 +987,6 @@ class AutoDisplay(w.VBox):
         actions = self.display_objects_actions + _new_actions
         self.display_objects_actions = actions
 
-    @property
-    def title(self):
-        return self._title
-
-    @title.setter
-    def title(self, value):
-        self._title = value
-        if self.title is None:
-            self.box_title.children = []
-        else:
-            self.box_title.children = [w.HTML(self.title)]
-
-    @property
-    def display_showhide(self):
-        return self._display_showhide
-
-    @display_showhide.setter
-    def display_showhide(self, value):
-        if hasattr(self, "display_objects") and len(self.display_objects) == 1:
-            value = False
-        self._display_showhide = value
-        if self.display_showhide:
-            self.box_showhide.children = [
-                w.HBox(layout=w.Layout(width="24px", height=BUTTON_HEIGHT_MIN)),
-                self.b_display_all,
-                self.b_collapse_all,
-                self.b_display_default,
-            ]
-        else:
-            self.box_showhide.children = []
-
-    @property
-    def paths(self):
-        return [d.path for d in self.display_objects_actions]
-
-    @property
-    def map_names_paths(self):
-        return {d.name: d.path for d in self.display_objects_actions}
-
-    @property
-    def display_objects_actions(self):
-        return self._display_objects_actions
-
-    @display_objects_actions.setter
-    def display_objects_actions(self, display_objects_actions):
-        self._display_objects_actions = display_objects_actions
-        self.display_objects = [DisplayActionsUi(d) for d in display_objects_actions]
-
-        self.box_paths.children = self.display_objects
-
-    @property
-    def patterns(self):
-        return self._patterns
-
-    @patterns.setter
-    def patterns(self, value):
-        self._patterns = value
-        if value is None:
-            self.b_display_default.layout.display = "None"
-            self.auto_open = [False] * len(self.paths)
-        else:
-            match = (
-                lambda name, path: str(path) if isinstance(path, pathlib.Path) else name
-            )
-            self.auto_open = [
-                fnmatch.fnmatch(match(name, path), patterns=self.patterns)
-                for name, path in self.map_names_paths.items()
-            ]
-            if sum(self.auto_open) == len(self.paths):
-                self.b_display_default.layout.display = "None"
-            else:
-                self.b_display_default.layout.display = ""
-
-    @property
-    def auto_open(self):
-        return [d.auto_open for d in self.display_objects]
-
-    @auto_open.setter
-    def auto_open(self, value):
-        [
-            setattr(d, "auto_open", v)
-            for d, v in dict(zip(self.display_objects, value)).items()
-        ]
-
-    def _init_form(self):
-        super().__init__()
-        self.b_display_all = w.Button(**KWARGS_DISPLAY_ALL_FILES)
-        self.b_collapse_all = w.Button(**KWARGS_COLLAPSE_ALL_FILES)
-        self.b_display_default = w.Button(**KWARGS_HOME_DISPLAY_FILES)
-        self.box_header = w.VBox()
-        self.box_showhide = w.HBox()
-        self.box_title = w.HBox()
-        self.box_header.children = [self.box_title, self.box_showhide]
-        self.box_paths = w.VBox()
-        self.children = [self.box_header, self.box_paths]
-
-    def _init_controls(self):
-        self.b_display_all.on_click(self.display_all)
-        self.b_collapse_all.on_click(self.collapse_all)
-        self.b_display_default.on_click(self.display_default)
-
-    def display_all(self, onclick=None):
-        for d in self.display_objects:
-            d.openpreview.value = True
-
-    def collapse_all(self, onclick=None):
-        for d in self.display_objects:
-            d.openpreview.value = False
-
-    def display_default(self, onclick=None):
-        for d, a in zip(self.display_objects, self.auto_open):
-            d.openpreview.value = a
-
-    def _activate_waiting(self):
-        [d._activate_waiting() for d in self.display_objects]
-
-    def _update_files(self):
-        [d._update_file() for d in self.display_objects]
-
-
 # %%
 # TODO: render pdf update the relative path
 
@@ -999,7 +1002,7 @@ if __name__ == "__main__":
     display(ad)
 # %%
 if __name__ == "__main__":
-    ad.order = ORDER_DEFAULT
+    ad.order = ORDER_DEFAULT  # ORDER_DEFAULT
 
 # %%
 if __name__ == "__main__":
