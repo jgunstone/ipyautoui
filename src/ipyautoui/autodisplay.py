@@ -257,7 +257,7 @@ def check_callable(fn: ty.Callable):  # NTO USED
         return False
 
 
-class DisplayFromCallable(DisplayActions):
+class DisplayCallableActions(DisplayActions):
     path: ty.Callable
 
     @validator("check_exists", always=True)
@@ -430,7 +430,9 @@ class DisplayCallable(DisplayObject):
         renderers = get_renderers(
             renderers=renderers, extend_default_renderers=extend_default_renderers
         )
-        display_actions = DisplayFromCallable(path=value, ext=ext, renderers=renderers)
+        display_actions = DisplayCallableActions(
+            path=value, ext=ext, renderers=renderers
+        )
         super().__init__(display_actions=display_actions, **kwargs)
 
 
@@ -554,7 +556,7 @@ if __name__ == "__main__":
     def get_catfact():
         return requests.get(path).content
 
-    display(DisplayFromCallable(path=get_catfact, ext=ext).renderer())
+    display(DisplayCallableActions(path=get_catfact, ext=ext).renderer())
 
 # %%
 if __name__ == "__main__":
@@ -809,7 +811,9 @@ class AutoDisplay(w.VBox):
                     elif isinstance(v, HttpUrl):
                         return DisplayRequestActions(path=v, ext=k, renderers=renderers)
                     elif callable(v):
-                        return DisplayFromCallable(path=v, ext=k, renderers=renderers)
+                        return DisplayCallableActions(
+                            path=v, ext=k, renderers=renderers
+                        )
                     else:
                         raise TypeError(
                             f"expected pathlib.Path or HttpUrl, got {type(v)}"
@@ -842,7 +846,7 @@ class AutoDisplay(w.VBox):
         map_callables: ty.Dict[str, ty.Callable], renderers=None
     ):
         return [
-            DisplayFromCallable(path=v, ext=k, renderers=renderers)
+            DisplayCallableActions(path=v, ext=k, renderers=renderers)
             for k, v in map_callables.items()
         ]
 
