@@ -634,6 +634,7 @@ if __name__ == "__main__":
 
 # %%
 class AutoDisplay(w.VBox):
+    # value = tr.
     order = tr.Tuple(default_value=ORDER_NOTPATH, allow_none=False)
     patterns = tr.List(trait=tr.Unicode())
     title = tr.Unicode()
@@ -673,16 +674,16 @@ class AutoDisplay(w.VBox):
             match = (
                 lambda name, path: str(path) if isinstance(path, pathlib.Path) else name
             )
-            
-            self.auto_open = [
-                fnmatch.fnmatch(match(name, path), patterns=self.patterns)
-                for name, path in self.map_names_paths.items()
-            ]
-            if sum(self.auto_open) == len(self.paths):
+            auto_open = []
+            for name, path in self.map_names_paths.items():
+                if fnmatch.fnmatch(match(name, path), patterns=self.patterns):
+                    self.map_paths_display_objects_actions[path].auto_open = True
+                    auto_open.append(path)
+
+            if sum(auto_open) == len(self.paths):
                 self.b_display_default.layout.display = "None"
             else:
                 self.b_display_default.layout.display = ""
-
 
     """
     displays the contents of a file in the notebook.
@@ -721,6 +722,10 @@ class AutoDisplay(w.VBox):
         return {d.name: d.path for d in self.display_objects_actions}
 
     @property
+    def map_paths_display_objects_actions(self):
+        return {d.path: d for d in self.display_objects_actions}
+
+    @property
     def display_objects_actions(self):
         return self._display_objects_actions
 
@@ -728,31 +733,30 @@ class AutoDisplay(w.VBox):
     def display_objects_actions(self, display_objects_actions):
         self._display_objects_actions = display_objects_actions
         self.display_objects = [DisplayActionsUi(d) for d in display_objects_actions]
-
         self.box_paths.children = self.display_objects
 
-    @property
-    def patterns(self):
-        return self._patterns
+    # @property
+    # def patterns(self):
+    #     return self._patterns
 
-    @patterns.setter
-    def patterns(self, value):
-        self._patterns = value
-        if value is None:
-            self.b_display_default.layout.display = "None"
-            self.auto_open = [False] * len(self.paths)
-        else:
-            match = (
-                lambda name, path: str(path) if isinstance(path, pathlib.Path) else name
-            )
-            self.auto_open = [
-                fnmatch.fnmatch(match(name, path), patterns=self.patterns)
-                for name, path in self.map_names_paths.items()
-            ]
-            if sum(self.auto_open) == len(self.paths):
-                self.b_display_default.layout.display = "None"
-            else:
-                self.b_display_default.layout.display = ""
+    # @patterns.setter
+    # def patterns(self, value):
+    #     self._patterns = value
+    #     if value is None:
+    #         self.b_display_default.layout.display = "None"
+    #         self.auto_open = [False] * len(self.paths)
+    #     else:
+    #         match = (
+    #             lambda name, path: str(path) if isinstance(path, pathlib.Path) else name
+    #         )
+    #         self.auto_open = [
+    #             fnmatch.fnmatch(match(name, path), patterns=self.patterns)
+    #             for name, path in self.map_names_paths.items()
+    #         ]
+    #         if sum(self.auto_open) == len(self.paths):
+    #             self.b_display_default.layout.display = "None"
+    #         else:
+    #             self.b_display_default.layout.display = ""
 
     def _init_form(self):
         self.b_display_all = w.Button(**KWARGS_DISPLAY_ALL_FILES)
@@ -765,7 +769,6 @@ class AutoDisplay(w.VBox):
         self.box_title.children = [self.html_title]
         self.box_header.children = [self.box_title, self.box_showhide]
         self.box_paths = w.VBox()
-
 
     def _init_controls(self):
         self.b_display_all.on_click(self.display_all)
@@ -986,6 +989,7 @@ class AutoDisplay(w.VBox):
         _new_actions = self.actions_from_paths(paths=paths, renderers=renderers)
         actions = self.display_objects_actions + _new_actions
         self.display_objects_actions = actions
+
 
 # %%
 # TODO: render pdf update the relative path
