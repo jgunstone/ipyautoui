@@ -41,6 +41,18 @@ Example:
 # %load_ext lab_black
 
 # %%
+# TODO: add caching
+# cache + reload
+# ---------------
+
+# im = w.Image.from_file("../../docs/logo.png")
+# path = pathlib.Path("../../docs/images/autoui-linegraph.png")
+# b = path.read_bytes()
+# im
+# wait
+# im.value = b
+
+# %%
 import pathlib
 import functools
 from IPython.display import (
@@ -79,12 +91,6 @@ from ipyautoui.constants import (
 from wcmatch import fnmatch
 import requests
 
-# from mf library
-# try:
-#     from xlsxtemplater import from_excel
-# except:
-#     pass
-
 
 # %%
 def merge_default_renderers(
@@ -111,7 +117,9 @@ def get_renderers(
 class DisplayActions(BaseModel):
     """base object with callables for creating a display object"""
 
-    renderers: dict[str, ty.Callable] = dict(DEFAULT_FILE_RENDERERS)
+    renderers: dict[str, ty.Callable] = dict(
+        DEFAULT_FILE_RENDERERS
+    )  # TODO: make this None and extend...
     path: ty.Union[str, pathlib.Path, HttpUrl, ty.Callable]
     ext: str = None
     name: str = None
@@ -144,7 +152,7 @@ def check_exists(path):
 
 
 class DisplayPathActions(DisplayActions):
-    path_new: pathlib.Path = None
+    path_new: pathlib.Path = None  # TODO: remove this ?
     open_file: ty.Callable = None
     open_folder: ty.Callable = None
 
@@ -152,7 +160,7 @@ class DisplayPathActions(DisplayActions):
     def _path(cls, v, values):
         return pathlib.Path(v)
 
-    @validator("path_new", always=True)
+    @validator("path_new", always=True)  # TODO: remove this ?
     def _path_new(cls, v, values):
         return make_new_path(values["path"].absolute())
 
@@ -243,14 +251,14 @@ class DisplayRequestActions(DisplayActions):
         return values["path"].path
 
 
-def check_callable_in_namespace(fn: ty.Callable):  # NTO USED
-    if fn.__name__ in globals():
-        return True
-    else:
-        return False
+# def check_callable_in_namespace(fn: ty.Callable):  # NTO USED
+#     if fn.__name__ in globals():
+#         return True
+#     else:
+#         return False
 
 
-def check_callable(fn: ty.Callable):  # NTO USED
+def check_callable(fn: ty.Callable):
     if isinstance(fn, ty.Callable):
         return True
     else:
@@ -454,7 +462,7 @@ class DisplayRequest(DisplayActionsUi):
 
 
 class DisplayPath(DisplayActionsUi):
-    _value = tr.Unicode(default_value="")
+    _value = tr.Unicode(default_value="")  # TODO: make the value a tuple.
 
     @tr.default("order")
     def _default_order(self):
@@ -472,6 +480,9 @@ class DisplayPath(DisplayActionsUi):
         )
         display_actions = DisplayPathActions(path=value, renderers=self.renderers)
         self._update_form_DisplayPath()
+        self._init_DisplayPath(display_actions, **kwargs)
+
+    def _init_DisplayPath(self, display_actions, **kwargs):
         super().__init__(display_actions=display_actions, **kwargs)
         self._init_controls_DisplayPath()
         self._update_path_tooltips()
@@ -533,9 +544,8 @@ open folder:
 
 # %%
 if __name__ == "__main__":
-    d = DisplayPathActions(path="__init__.py")
-    do = DisplayActionsUi(d)
-    display(do)
+    d = DisplayPath("__init__.py")
+    display(d)
 
 # %%
 if __name__ == "__main__":
@@ -637,16 +647,20 @@ class AutoDisplay(w.VBox):
     # value = tr.
     order = tr.Tuple(default_value=ORDER_NOTPATH, allow_none=False)
     patterns = tr.List(trait=tr.Unicode())
-    title = tr.Unicode()
+    title = tr.Unicode(default_value="")
+    # description
     display_showhide = tr.Bool(default_value=False)
-    display_actions = tr.List(trait=tr.Instance(klass=DisplayActions))
+    display_actions = tr.List(
+        trait=tr.Instance(klass=DisplayActions)
+    )  # TODO: remove this
 
     @tr.observe("title")
-    def title(self, change):
+    def _observe_title(self, change):
         self.html_title.value = change["new"]
 
     @tr.observe("order")
     def _observe_order(self, change):
+        print(f"_observe_order = {change['new']}")
         for d in self.display_objects:
             d.order = change["new"]
 
@@ -656,7 +670,7 @@ class AutoDisplay(w.VBox):
             self.display_showhide = False
         if self.display_showhide:
             self.box_showhide.children = [
-                w.HBox(layout=w.Layout(width="24px", height=BUTTON_HEIGHT_MIN)),
+                # w.HBox(layout=w.Layout(width="24px", height=BUTTON_HEIGHT_MIN)),
                 self.b_display_all,
                 self.b_collapse_all,
                 self.b_display_default,
@@ -664,8 +678,9 @@ class AutoDisplay(w.VBox):
         else:
             self.box_showhide.children = []
 
-    @tr.observe("patterns")
+    @tr.observe("patterns")  # update to use re
     def _observe_patterns(self, change):
+        print(f"_observe_patterns = {change['new']}")
         if change["new"] is None:
             self.b_display_default.layout.display = "None"
             for d in self.display_actions:
@@ -674,13 +689,15 @@ class AutoDisplay(w.VBox):
             match = (
                 lambda name, path: str(path) if isinstance(path, pathlib.Path) else name
             )
-            auto_open = []
+            count = 0
             for name, path in self.map_names_paths.items():
                 if fnmatch.fnmatch(match(name, path), patterns=self.patterns):
-                    self.map_paths_display_objects_actions[path].auto_open = True
-                    auto_open.append(path)
+                    self.map_paths_display_objects[path].auto_open = True
+                    count += 1
+                else:
+                    self.map_paths_display_objects[path].auto_open = False
 
-            if sum(auto_open) == len(self.paths):
+            if count == len(self.paths):
                 self.b_display_default.layout.display = "None"
             else:
                 self.b_display_default.layout.display = ""
@@ -722,8 +739,8 @@ class AutoDisplay(w.VBox):
         return {d.name: d.path for d in self.display_objects_actions}
 
     @property
-    def map_paths_display_objects_actions(self):
-        return {d.path: d for d in self.display_objects_actions}
+    def map_paths_display_objects(self):
+        return {d.display_actions.path: d for d in self.display_objects}
 
     @property
     def display_objects_actions(self):
@@ -735,28 +752,9 @@ class AutoDisplay(w.VBox):
         self.display_objects = [DisplayActionsUi(d) for d in display_objects_actions]
         self.box_paths.children = self.display_objects
 
-    # @property
-    # def patterns(self):
-    #     return self._patterns
-
-    # @patterns.setter
-    # def patterns(self, value):
-    #     self._patterns = value
-    #     if value is None:
-    #         self.b_display_default.layout.display = "None"
-    #         self.auto_open = [False] * len(self.paths)
-    #     else:
-    #         match = (
-    #             lambda name, path: str(path) if isinstance(path, pathlib.Path) else name
-    #         )
-    #         self.auto_open = [
-    #             fnmatch.fnmatch(match(name, path), patterns=self.patterns)
-    #             for name, path in self.map_names_paths.items()
-    #         ]
-    #         if sum(self.auto_open) == len(self.paths):
-    #             self.b_display_default.layout.display = "None"
-    #         else:
-    #             self.b_display_default.layout.display = ""
+    @property
+    def auto_open(self):
+        return [l.auto_open for l in self.display_objects]
 
     def _init_form(self):
         self.b_display_all = w.Button(**KWARGS_DISPLAY_ALL_FILES)
@@ -796,11 +794,7 @@ class AutoDisplay(w.VBox):
     def __init__(
         self,
         display_objects_actions: ty.List[DisplayActions],
-        patterns: ty.Union[
-            str, ty.List, None
-        ] = None,  # TODO: add pattern matching. currently only works with paths
-        title: ty.Union[str, None] = None,
-        display_showhide: bool = True,
+        **kwargs,
     ):
         """
         Args:
@@ -813,23 +807,14 @@ class AutoDisplay(w.VBox):
         """
         self._init_form()
         self._init_controls()
-        self.title = title
         self._display_objects_actions = display_objects_actions
         self.display_objects_actions = display_objects_actions
-        self.display_showhide = display_showhide
-        self.patterns = patterns
         super().__init__(**kwargs)
         self.children = [self.box_header, self.box_paths]
+        self.display_default()
 
     @classmethod
-    def from_paths(
-        cls,
-        paths: ty.List[pathlib.Path],
-        renderers=None,
-        patterns: ty.Union[str, ty.List] = None,
-        title: ty.Union[str, None] = None,
-        display_showhide: bool = True,
-    ):
+    def from_paths(cls, paths: ty.List[pathlib.Path], renderers=None, **kwargs):
         if renderers is not None:
             renderers = merge_default_renderers(renderers)
         else:
@@ -841,12 +826,7 @@ class AutoDisplay(w.VBox):
             paths=paths,
             renderers=renderers,
         )
-        return cls(
-            display_objects_actions,
-            patterns=patterns,
-            title=title,
-            display_showhide=display_showhide,
-        )
+        return cls(display_objects_actions, **kwargs)
 
     @classmethod
     def from_requests(
@@ -992,8 +972,6 @@ class AutoDisplay(w.VBox):
 
 
 # %%
-# TODO: render pdf update the relative path
-
 if __name__ == "__main__":
     from ipyautoui.test_schema import TestAutoLogic
     from ipyautoui.autoui import AutoUi
@@ -1002,7 +980,13 @@ if __name__ == "__main__":
     tests_constants = load_test_constants()
     DIR_FILETYPES = load_test_constants().DIR_FILETYPES
     paths = list(pathlib.Path(DIR_FILETYPES).glob("*"))
-    ad = AutoDisplay.from_paths(paths, patterns="*.csv")
+    order = (
+        "openpreview",
+        "name",
+    )
+    ad = AutoDisplay.from_paths(
+        paths, patterns="*.csv", order=order, display_showhide=True, title="cool"
+    )
     display(ad)
 # %%
 if __name__ == "__main__":
