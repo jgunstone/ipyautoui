@@ -40,7 +40,7 @@ from pydantic import HttpUrl, parse_obj_as
 from ipyautoui.mydocstring_display import display_module_docstring
 from ipyautoui._utils import (
     del_matching,
-    display_python_file,
+    syntax_highlight_python_string,
     frozenmap,
     check_installed,
     get_ext,
@@ -83,77 +83,82 @@ def getbytes(path: ty.Union[pathlib.Path, HttpUrl, ty.Callable]) -> ty.ByteStrin
         )
 
 
-class PreviewPython:
-    """
-    pass the class either a filepath or an imported
-    module and get a display output of the modules
-    docstring with a toggle option to view the code
-    """
+# class PreviewPython:
+#     """
+#     pass the class either a filepath or an imported
+#     module and get a display output of the modules
+#     docstring with a toggle option to view the code
+#     """
 
-    def __init__(self, module, preview_script=True, docstring_priority=True):
-        self.input = module
-        self.preview_script = preview_script
-        self.docstring_priority = docstring_priority
-        self.out = w.Output()
-        self.fpth = self._handle_input()
-        self._init_form()
-        self._init_controls()
-        if self.docstring_priority:
-            self._show_docstring()
-        else:
-            self.show_me_the_code.value = True
+#     def __init__(self, module, preview_script=True, docstring_priority=True):
+#         self.input = module
+#         self.preview_script = preview_script
+#         self.docstring_priority = docstring_priority
+#         self.out = w.Output()
+#         self.fpth = self._handle_input()
+#         self._init_form()
+#         self._init_controls()
+#         if self.docstring_priority:
+#             self._show_docstring()
+#         else:
+#             self.show_me_the_code.value = True
 
-    def _handle_input(self):
-        if str(type(self.input)) == "<class 'module'>":
-            fpth = self.input.__file__
-        else:
-            fpth = self.input
-        if os.path.splitext(fpth)[1] != ".py":
-            print("{0}: not a python file".format(fpth))
-        return fpth
+#     def _handle_input(self):
+#         if str(type(self.input)) == "<class 'module'>":
+#             fpth = self.input.__file__
+#         else:
+#             fpth = self.input
+#         if os.path.splitext(fpth)[1] != ".py":
+#             print("{0}: not a python file".format(fpth))
+#         return fpth
 
-    def _init_form(self):
-        self.title = w.HTML("")
-        self.show_me_the_code = w.ToggleButton(layout=w.Layout(width=BUTTON_WIDTH_MIN))
-        self.headerbox = w.VBox([w.HBox([self.show_me_the_code, self.title])])
+#     def _init_form(self):
+#         self.title = w.HTML("")
+#         self.show_me_the_code = w.ToggleButton(layout=w.Layout(width=BUTTON_WIDTH_MIN))
+#         self.headerbox = w.VBox([w.HBox([self.show_me_the_code, self.title])])
 
-        if self.preview_script:
-            display(self.headerbox)
+#         if self.preview_script:
+#             display(self.headerbox)
 
-    def _init_controls(self):
-        self.show_me_the_code.observe(self._show_me_the_code, "value")
+#     def _init_controls(self):
+#         self.show_me_the_code.observe(self._show_me_the_code, "value")
 
-    def _update_title(self):
-        self.title.value = "👆 {}".format(self.description)
+#     def _update_title(self):
+#         self.title.value = "👆 {}".format(self.description)
 
-    def _show_docstring(self):
-        self.show_me_the_code.icon = "scroll"
-        self.show_me_the_code.tooltip = "show the raw python code"
-        self.show_me_the_code.button_style = "warning"
-        self.description = "show python code"
-        self._update_title()
-        with self.out:
-            clear_output()
-            display_module_docstring(self.fpth)
+#     def _show_docstring(self):
+#         self.show_me_the_code.icon = "scroll"
+#         self.show_me_the_code.tooltip = "show the raw python code"
+#         self.show_me_the_code.button_style = "warning"
+#         self.description = "show python code"
+#         self._update_title()
+#         with self.out:
+#             clear_output()
+#             display_module_docstring(self.fpth)
 
-    def _show_me_the_code(self, sender):
-        self.show_me_the_code.icon = "book"
-        self.show_me_the_code.tooltip = "show the python script documentation"
-        self.show_me_the_code.button_style = "info"
-        self.description = "show documentation"
-        self._update_title()
-        with self.out:
-            clear_output()
-            if self.show_me_the_code.value:
-                display_python_file(self.fpth)
-            else:
-                self._show_docstring()
+#     def _show_me_the_code(self, sender):
+#         self.show_me_the_code.icon = "book"
+#         self.show_me_the_code.tooltip = "show the python script documentation"
+#         self.show_me_the_code.button_style = "info"
+#         self.description = "show documentation"
+#         self._update_title()
+#         with self.out:
+#             clear_output()
+#             if self.show_me_the_code.value:
+#                 display_python_file(self.fpth)
+#             else:
+#                 self._show_docstring()
 
-    def display(self):
-        display(self.out)
+#     def display(self):
+#         display(self.out)
 
-    def _ipython_display_(self):
-        self.display()
+#     def _ipython_display_(self):
+#         self.display()
+
+
+def preview_python(path):
+    byts = getbytes(path)
+    return syntax_highlight_python_string(byts.decode())
 
 
 # +
@@ -465,6 +470,7 @@ DEFAULT_FILE_RENDERERS = frozenmap(
         ".json": preview_json,
         ".plotly": preview_plotly,
         ".plotly.json": preview_plotly,
+        ".vega": preview_vega,
         ".vg.json": preview_vega,
         ".vl.json": preview_vegalite,
         ".yaml": preview_yaml,
@@ -483,7 +489,7 @@ DEFAULT_FILE_RENDERERS = frozenmap(
         "": preview_text_or_dir,  # make this recursive ?
         ".toml": preview_text,
         ".md": preview_markdown,
-        ".py": PreviewPython,
+        ".py": preview_python,
         ".pdf": preview_pdf,
     }
 )

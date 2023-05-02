@@ -160,11 +160,20 @@ def del_matching(df, string):
 #  ------------------------------------------------------------------------------------------------
 
 
-def display_python_string(string, show=True, return_str=False, myst_format=False):
+def create_pyblock(s, myst_format=False):
     if myst_format:
-        s = "\n```{code-cell} ipython3\n" + string + "\n```"
+        return "\n```{code-cell} ipython3\n" + s + "\n```"
     else:
-        s = "\n```python\n" + string + "\n```"
+        return "\n```python\n" + s + "\n```"
+
+
+def syntax_highlight_python_string(s, myst_format=False):
+    s = create_pyblock(s)
+    return Markdown(s)
+
+
+def display_python_string(string, show=True, return_str=False, myst_format=False):
+    s = create_pyblock(string)
     if show:
         display(Markdown(s))
     if return_str:
