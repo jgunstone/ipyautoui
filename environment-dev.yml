@@ -9,9 +9,9 @@ dependencies:
   - python
   - numpy
   - pandas
-  - jupyterlab
-  - jupyterlab-lsp
-  - jupyter-lsp-python
+  - jupyterlab>4
+ # - jupyterlab-lsp  # TODO: add back when jupyterlab-lsp ready
+ # - jupyter-lsp-python
   - xeus-python
   - ipywidgets>8
   - ipyfilechooser
